@@ -6,8 +6,8 @@
 /*
             --------------
  valid ---->|            |
-            |			 |
-    a -/--->|       	 |
+            |			    |
+    a -/--->|       	    |
             |   add/mul/sub/div |---/-> c
     b -/--->|            |
    add-/--->|            |
@@ -31,11 +31,14 @@ module alu
   input        mul_i,
   input        sub_i,
   input        div_i,
+  input        and_i,
+  input        or_i,
+  input        xor_i,
   output logic [WORD_LENGTH*2-1 : 0] c); 
   
   reg [7:0] add_tmp_reg, tmp_2c;
   // Define our states
-   typedef enum {IDLE, START, ADD, SUB, MUL, DIV}  alu_state;
+   typedef enum {IDLE, START, ADD, SUB, MUL, DIV, AND_op, OR_op, XOR_op}  alu_state;
    alu_state current_state = IDLE;
    alu_state next_state    = IDLE;
    
@@ -89,6 +92,18 @@ module alu
                end else if ((valid) && (div_i)) begin
 					   $display("Time=%t, -->> Division <<--", $time);
                   next_state = DIV;
+			   // AND Op //
+               end else if ((valid) && (and_i)) begin
+					   $display("Time=%t, -->> bitwise AND <<--", $time);
+                  next_state = AND_op;	  
+			   // OR Op //
+               end else if ((valid) && (or_i)) begin
+					   $display("Time=%t, -->> bitwise OR <<--", $time);
+                  next_state = OR_op;
+               // XOR Op //
+               end else if ((valid) && (xor_i)) begin
+					   $display("Time=%t, -->> bitwise XOR <<--", $time);
+                  next_state = XOR_op;	 				  
                end else begin
 			       c <= 8'h00; 
 			       next_state = IDLE;
@@ -99,7 +114,7 @@ module alu
 			   
           ADD  :
             begin
-                  c <= add_tmp_reg; 
+                  c <= a + b; 
                   next_state = IDLE;
                end
 			   
@@ -120,6 +135,23 @@ module alu
                   c <= a/b; 
                   next_state = IDLE;
                end	
+			   
+		  AND_op  :
+             begin
+                  c <= a&b; 
+                  next_state = IDLE;
+               end		
+
+          OR_op  :
+             begin
+                  c <= a|b; 
+                  next_state = IDLE;
+               end		
+          XOR_op  :
+             begin
+                  c <= a^b; 
+                  next_state = IDLE;
+               end					   
           default:
 			   begin
             next_state = current_state;
@@ -131,3 +163,25 @@ module alu
 
 endmodule
 
+//----------------------------------------------------------------------
+// Author : Ahmed Asim Ghouri
+// Date : 27/03/2026
+// Interface for ALU
+//-------------------------------------------------------------------------
+interface intf_alu#(parameter WORD_LENGTH = 4)
+   (input logic clk,reset);
+  
+  //declaring the signals
+  logic       valid;
+  logic       add_i;
+  logic       mul_i;
+  logic       sub_i;
+  logic       div_i;
+  logic       and_i;
+  logic       or_i;
+  logic       xor_i;
+  logic [WORD_LENGTH-1:0] a;
+  logic [WORD_LENGTH-1:0] b;
+  logic [WORD_LENGTH*2-1:0] c;
+  
+endinterface
