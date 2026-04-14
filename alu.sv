@@ -22,10 +22,11 @@ module alu
     parameter WORD_LENGTH = 4
     )
 (
-  input 	   clk	,
+  input 	   clk,
   input 	   reset,
   input  logic [WORD_LENGTH -1 : 0] a,
   input  logic [WORD_LENGTH -1 : 0] b,
+  input  logic [WORD_LENGTH -1 : 0] no_bits,
   input        valid,
   input        add_i,
   input        mul_i,
@@ -34,13 +35,21 @@ module alu
   input        and_i,
   input        or_i,
   input        xor_i,
+  input        shf_L_a,
+  input        shf_L_b,
   output logic [WORD_LENGTH*2-1 : 0] c); 
   
   reg [7:0] add_tmp_reg, tmp_2c;
-  // Define our states
-   typedef enum {IDLE, START, ADD, SUB, MUL, DIV, AND_op, OR_op, XOR_op}  alu_state;
+  int unsigned no_bits_int;
+   // Define our states
+   typedef enum {IDLE, START, ADD, SUB, MUL, DIV, AND_op, OR_op, XOR_op, Shift_left_a, Shift_left_b}  alu_state;
    alu_state current_state = IDLE;
    alu_state next_state    = IDLE;
+	
+	///// Converting no of bits to integer ////
+	always_comb begin
+    no_bits_int = int'(no_bits);   // explicit cast
+   end
    
   
   //Reset 
@@ -103,7 +112,15 @@ module alu
                // XOR Op //
                end else if ((valid) && (xor_i)) begin
 					   $display("Time=%t, -->> bitwise XOR <<--", $time);
-                  next_state = XOR_op;	 				  
+                  next_state = XOR_op;	 	
+	            // Shift Left Op //
+               end else if ((valid) && (shf_L_a)) begin
+					   $display("Time=%t, -->> bitwise Shift Left a <<--", $time);
+                  next_state = Shift_left_a;	 
+               // Shift Left Op //
+               end else if ((valid) && (shf_L_b)) begin
+					   $display("Time=%t, -->> bitwise Shift Left b <<--", $time);
+                  next_state = Shift_left_b;							
                end else begin
 			       c <= 8'h00; 
 			       next_state = IDLE;
@@ -114,7 +131,7 @@ module alu
 			   
           ADD  :
             begin
-                  c <= a + b; 
+                  c <= add_tmp_reg; 
                   next_state = IDLE;
                end
 			   
@@ -151,7 +168,18 @@ module alu
              begin
                   c <= a^b; 
                   next_state = IDLE;
-               end					   
+               end				
+	       /////////////////////////
+          Shift_left_a  :
+             begin
+                  c <= a << no_bits_int; 
+                  next_state = IDLE;
+               end			
+	       Shift_left_b  :
+             begin
+                  c <= b << no_bits_int; 
+                  next_state = IDLE;
+               end							
           default:
 			   begin
             next_state = current_state;
@@ -180,8 +208,13 @@ interface intf_alu#(parameter WORD_LENGTH = 4)
   logic       and_i;
   logic       or_i;
   logic       xor_i;
+  logic       shf_L_a;
+  logic       shf_L_b;
   logic [WORD_LENGTH-1:0] a;
   logic [WORD_LENGTH-1:0] b;
+  logic [WORD_LENGTH-1:0] no_bits;
   logic [WORD_LENGTH*2-1:0] c;
   
 endinterface
+
+
